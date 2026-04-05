@@ -1,0 +1,9 @@
+[
+  {"name": "Cargo.toml", "type": "file"},
+  {"name": "CLAUDE.md", "type": "file"},
+  {"name": "Makefile", "type": "file"},
+  {"name": "README.md", "type": "file"},
+  {"name": "src", "type": "dir"},
+  {"name": ".github", "type": "dir"},
+  {"name": "LICENSE", "type": "file"}
+]
