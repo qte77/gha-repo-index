@@ -1,0 +1,71 @@
+name: "Repo Index"
+description: "Analyze GitHub repos and generate a structured registry for agent context and GHA consumption."
+author: "qte77"
+branding:
+  icon: "database"
+  color: "green"
+
+inputs:
+  OWNER:
+    description: "GitHub owner/org to auto-discover repos from."
+    default: ${{ github.repository_owner }}
+  REPOS:
+    description: "Comma-separated owner/repo list. If empty, auto-discovers all repos for OWNER."
+    required: false
+  AI_ENABLED:
+    description: "Enable AI summarization via GitHub Models."
+    default: "false"
+  AI_MODEL:
+    description: "GitHub Models AI model to use."
+    default: "openai/gpt-4.1-mini"
+  OUTPUT_DIR:
+    description: "Directory to write registry files."
+    default: "registry"
+  INCLUDE_ARCHIVED:
+    description: "Include archived repos."
+    default: "false"
+  INCLUDE_FORKS:
+    description: "Include forked repos."
+    default: "false"
+  TOKEN:
+    description: "GitHub token with repo read access."
+    default: ${{ github.token }}
+  COMMITTER_NAME:
+    description: "Git committer name."
+    default: "RepoIndex-GHA"
+  COMMITTER_EMAIL:
+    description: "Git committer email."
+    default: "repo-index@gha"
+  CREATE_PR:
+    description: "Whether to create a PR with changes."
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 1
+        token: ${{ inputs.TOKEN || github.token }}
+
+    - name: Generate registry
+      shell: bash
+      env:
+        INPUT_OWNER: ${{ inputs.OWNER }}
+        INPUT_REPOS: ${{ inputs.REPOS }}
+        INPUT_AI_ENABLED: ${{ inputs.AI_ENABLED }}
+        INPUT_AI_MODEL: ${{ inputs.AI_MODEL }}
+        INPUT_OUTPUT_DIR: ${{ inputs.OUTPUT_DIR }}
+        INPUT_INCLUDE_ARCHIVED: ${{ inputs.INCLUDE_ARCHIVED }}
+        INPUT_INCLUDE_FORKS: ${{ inputs.INCLUDE_FORKS }}
+        GH_TOKEN: ${{ inputs.TOKEN || github.token }}
+        AI_TOKEN: ${{ inputs.TOKEN || github.token }}
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/"*.sh
+        source "${{ github.action_path }}/scripts/common.sh"
+        source "${{ github.action_path }}/scripts/collect-repo-metadata.sh"
+        source "${{ github.action_path }}/scripts/render.sh"
+        source "${{ github.action_path }}/scripts/summarize-with-ai.sh"
+        source "${{ github.action_path }}/scripts/generate-registry.sh"
+        generate_registry
