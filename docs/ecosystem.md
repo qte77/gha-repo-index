@@ -6,7 +6,7 @@
 
 ## Data Flow
 
-```
+```bash
 gha-repo-index reads:
   ├── gh repo list (bulk metadata, 1 API call)
   ├── gh api repos/.../contents (file tree per repo)
@@ -28,7 +28,7 @@ Future: other GHAs consume index.json (opt-in, one at a time):
 
 ## GHA Hierarchy
 
-```
+```text
 ┌─── OBSERVE ──────────────────────────────────────────┐
 │                                                       │
 │  gha-repo-index (NEW)      gha-arbitrary-repo-timeline│
