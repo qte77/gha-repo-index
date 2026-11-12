@@ -17,3 +17,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Overview table sorted by last push date
 - BATS test suite (70 tests) with `gh_mock.bash` infrastructure
 - GHA ecosystem documentation (`docs/ecosystem.md`)
+- `dependabot.yml` with weekly grouped `github-actions` updates
