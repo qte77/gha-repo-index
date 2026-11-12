@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BATS test suite (70 tests) with `gh_mock.bash` infrastructure
 - GHA ecosystem documentation (`docs/ecosystem.md`)
 - `dependabot.yml` with weekly grouped `github-actions` updates
+- `.github/workflows/codeql.yml`: CodeQL code scanning (`actions` language,
+  matching the SHA-pinned variant used by sibling `gha-*` repos), closing the
+  gap where this repo was the sole `gha-*` outlier without one
 - `.github/workflows/lint-actions.yml`: adopt the shared `qte77/.github` reusable
   `lint-actions` gate (actionlint + yamllint + zizmor) on push/PR/dispatch to `main`
 - `Makefile`: wire `actionlint` and `zizmor` into the `lint` target (previously
