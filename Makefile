@@ -8,6 +8,8 @@ setup_dev:
 	@command -v shellcheck >/dev/null 2>&1 || sudo apt-get install -y shellcheck
 	@echo "Installing actionlint..."
 	@command -v actionlint >/dev/null 2>&1 || go install github.com/rhysd/actionlint/cmd/actionlint@latest 2>/dev/null || true
+	@echo "Installing zizmor..."
+	@command -v zizmor >/dev/null 2>&1 || pip install --quiet zizmor==1.26.1 2>/dev/null || true
 
 test:
 	bats tests/unit/
@@ -17,6 +19,8 @@ test_infra:
 
 lint:
 	shellcheck scripts/*.sh .github/scripts/*.sh
+	actionlint
+	zizmor --offline .github/workflows/
 
 test_all: test lint
 
