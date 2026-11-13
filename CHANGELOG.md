@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `pyproject.toml`, `README.md`: version files aligned to the existing `v0.1.1` tag and release
+  (2026-06-13); they had stayed at `0.1.0`.
+
 ### Added
 
 - Composite action with auto-discover via `gh repo list --limit 200`
