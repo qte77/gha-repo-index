@@ -4,4 +4,4 @@
 
 Analyze GitHub repos and generate a structured registry for agent context and GHA consumption.
 
-![Version](https://img.shields.io/badge/version-0.1.0-8A2BE2)
+![Version](https://img.shields.io/badge/version-0.1.1-8A2BE2)
