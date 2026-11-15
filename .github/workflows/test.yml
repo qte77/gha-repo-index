@@ -25,3 +25,22 @@ jobs:
 
       - name: Run bats tests
         run: bats tests/unit/
+
+  # Runs the composite action itself, so a change to action.yaml (such as a
+  # pinned-action bump) is exercised by a check. Output stays on the runner.
+  action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Run the action
+        uses: ./
+        with:
+          OUTPUT_DIR: ${{ runner.temp }}/registry
+
+      - name: Check the registry output
+        run: |
+          jq -e '.repo_count > 0 and (.repos | length) == .repo_count' "$RUNNER_TEMP/registry/index.json"
+          grep -qF "(https://github.com/$GITHUB_REPOSITORY)" "$RUNNER_TEMP/registry/REPO_REGISTRY.md"

@@ -142,3 +142,46 @@ teardown() {
   # ASSERT
   [ "$(echo "$result" | jq -r '.projectType')" = "python" ]
 }
+
+# --- collect_bulk_metadata: retry around the repo listing ---
+
+# Stub `gh` on PATH: the first $1 calls fail like a GraphQL 5xx, later calls
+# print the repo_list fixture. Counts calls in $TMPDIR/gh_calls.
+stub_gh_failing_first() {
+  unset -f gh
+  mkdir -p "$TMPDIR/bin"
+  cat > "$TMPDIR/bin/gh" <<STUB
+#!/bin/bash
+n=\$(( \$(cat "$TMPDIR/gh_calls" 2>/dev/null || echo 0) + 1 ))
+echo "\$n" > "$TMPDIR/gh_calls"
+if [ "\$n" -le "$1" ]; then
+  echo "HTTP 502: 502 Bad Gateway (https://api.github.com/graphql)" >&2
+  exit 1
+fi
+cat "$REPO_ROOT/tests/fixtures/repo_list.json"
+STUB
+  chmod +x "$TMPDIR/bin/gh"
+  export PATH="$TMPDIR/bin:$PATH"
+  REPO_LIST_RETRY_DELAY=0
+}
+
+@test "collect_bulk_metadata retries the repo listing after a failed call" {
+  # ARRANGE
+  stub_gh_failing_first 1
+  # ACT
+  result=$(collect_bulk_metadata "qte77")
+  # ASSERT — second call succeeded; fixture has 2 non-archived, non-fork repos
+  [ "$(cat "$TMPDIR/gh_calls")" -eq 2 ]
+  [ "$(echo "$result" | jq length)" -eq 2 ]
+}
+
+@test "collect_bulk_metadata fails with a clear error when every listing attempt fails" {
+  # ARRANGE
+  stub_gh_failing_first 99
+  # ACT
+  run collect_bulk_metadata "qte77"
+  # ASSERT
+  [ "$status" -ne 0 ]
+  [ "$(cat "$TMPDIR/gh_calls")" -eq 3 ]
+  [[ "$output" == *"listing repos for 'qte77' failed after 3 attempts"* ]]
+}
