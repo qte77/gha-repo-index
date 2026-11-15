@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `.github/workflows/test.yml`: `action-smoke` job runs the composite action on every PR and
+  checks `index.json` and `REPO_REGISTRY.md`, so changes to `action.yaml` are exercised by CI
 - Composite action with auto-discover via `gh repo list --limit 200`
 - Bulk metadata collection with archive/fork filtering
 - Per-repo structure extraction (key files, project type, README excerpt)
