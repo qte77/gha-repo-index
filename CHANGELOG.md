@@ -9,13 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `scripts/collect-repo-metadata.sh`: `collect_bulk_metadata` retries `gh repo list` up to 3 times
+  (5 s apart) when it fails or returns no JSON array, as a transient GraphQL HTTP 502 does, and then
+  fails with a clear error. Before, the empty output surfaced later as a `jq --argjson` error
 - `pyproject.toml`, `README.md`: version files aligned to the existing `v0.1.1` tag and release
   (2026-06-13); they had stayed at `0.1.0`.
 
 ### Added
 
 - `.github/workflows/test.yml`: `action-smoke` job runs the composite action on every PR and
-  checks `index.json` and `REPO_REGISTRY.md`, so changes to `action.yaml` are exercised by CI
+  checks `index.json` and that `REPO_REGISTRY.md` lists this repo, so changes to `action.yaml` are exercised by CI
 - Composite action with auto-discover via `gh repo list --limit 200`
 - Bulk metadata collection with archive/fork filtering
 - Per-repo structure extraction (key files, project type, README excerpt)

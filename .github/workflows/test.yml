@@ -43,4 +43,4 @@ jobs:
       - name: Check the registry output
         run: |
           jq -e '.repo_count > 0 and (.repos | length) == .repo_count' "$RUNNER_TEMP/registry/index.json"
-          test -s "$RUNNER_TEMP/registry/REPO_REGISTRY.md"
+          grep -qF "(https://github.com/$GITHUB_REPOSITORY)" "$RUNNER_TEMP/registry/REPO_REGISTRY.md"

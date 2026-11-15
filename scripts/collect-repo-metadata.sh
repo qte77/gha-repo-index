@@ -9,16 +9,29 @@ KEY_FILE_PATTERNS=(
   "Dockerfile" "Makefile" ".devcontainer"
 )
 
+REPO_LIST_MAX_ATTEMPTS=3
+REPO_LIST_RETRY_DELAY=5
+
 # Fetch bulk metadata for all repos of an owner.
 # Filters archived/forked repos based on INPUT_INCLUDE_* env vars.
 # Args: $1 = owner
 collect_bulk_metadata() {
   local owner="$1"
-  local raw
-  raw=$(gh repo list "$owner" --limit 200 --json \
+  local raw="" attempt=1
+  # Reason: the GraphQL listing can fail transiently (HTTP 502). Retry, and fail here with a
+  # clear message instead of passing empty output on to a later jq error.
+  until raw=$(gh repo list "$owner" --limit 200 --json \
     name,nameWithOwner,description,primaryLanguage,languages,repositoryTopics,\
 pushedAt,createdAt,isArchived,isFork,isTemplate,visibility,\
-defaultBranchRef,stargazerCount,forkCount,licenseInfo,diskUsage,url)
+defaultBranchRef,stargazerCount,forkCount,licenseInfo,diskUsage,url) \
+    && jq -e 'type == "array"' <<< "$raw" > /dev/null 2>&1; do
+    if [ "$attempt" -ge "$REPO_LIST_MAX_ATTEMPTS" ]; then
+      echo "collect_bulk_metadata: listing repos for '$owner' failed after $attempt attempts" >&2
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$REPO_LIST_RETRY_DELAY"
+  done
 
   # Filter archived
   if [[ "${INPUT_INCLUDE_ARCHIVED:-false}" != "true" ]]; then
