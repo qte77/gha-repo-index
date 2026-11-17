@@ -10,6 +10,11 @@ set -euo pipefail
 
 AI_MAX_RETRIES=3
 AI_RETRY_DELAY=5
+AI_CONNECT_TIMEOUT=10
+AI_MAX_TIME=60
+# Reason: summaries run in a subshell per repo, so a shell variable can't carry
+# "auth failed" to the next repo; a marker file for this run can.
+AI_AUTH_FAILED_FILE="${TMPDIR:-/tmp}/repo-index-ai-auth-failed.$$"
 AI_SYSTEM_PROMPT="You are a concise technical writer. Given repository metadata, produce a 2-3 sentence summary describing: (1) what the project does, (2) its primary technology, (3) its role if part of a larger ecosystem. Output ONLY the summary text."
 
 # Print the configured provider: "openai", "anthropic", or nothing.
@@ -81,22 +86,26 @@ call_ai_model() {
     openai)
       url="${INPUT_API_BASE%/}/chat/completions"
       headers=(-H "Authorization: Bearer ${AI_TOKEN:-}")
-      content_path='.choices[0].message.content'
+      content_path='.choices[0].message.content // empty'
       ;;
     anthropic)
       url="https://api.anthropic.com/v1/messages"
       headers=(-H "x-api-key: ${ANTHROPIC_API_KEY}" -H "anthropic-version: 2023-06-01")
-      content_path='.content[0].text'
+      content_path='first(.content[]? | select(.type == "text") | .text) // empty'
       ;;
     *)
       return 0
       ;;
   esac
 
+  # After an auth failure earlier in this run, don't call the provider again
+  [ -e "$AI_AUTH_FAILED_FILE" ] && return 0
+
   local attempt=0
   while [ "$attempt" -lt "$AI_MAX_RETRIES" ]; do
     local response body status
     response=$(curl -s -w "\n%{http_code}" -X POST "$url" \
+      --connect-timeout "$AI_CONNECT_TIMEOUT" --max-time "$AI_MAX_TIME" \
       -H "Content-Type: application/json" \
       "${headers[@]}" \
       -d "$payload")
@@ -108,6 +117,16 @@ call_ai_model() {
       echo "$body" | jq -r "$content_path"
       return 0
     fi
+    case "$status" in
+      401 | 403)
+        echo "::warning::AI provider rejected the credentials (HTTP $status); skipping AI summaries for the rest of this run." >&2
+        : > "$AI_AUTH_FAILED_FILE"
+        return 0
+        ;;
+      4??)
+        [ "$status" != "429" ] && return 0  # a request error won't succeed on retry
+        ;;
+    esac
 
     attempt=$((attempt + 1))
     [ "$attempt" -lt "$AI_MAX_RETRIES" ] && sleep "$AI_RETRY_DELAY"

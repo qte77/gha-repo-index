@@ -203,3 +203,49 @@ teardown() {
   [ -z "$result" ]
   [ ! -s "$CURL_MOCK_LOG" ]
 }
+
+# --- review follow-ups: timeouts, null content, fail fast ---
+
+@test "call_ai_model bounds the request with connect and total timeouts" {
+  CURL_MOCK_RESPONSE='{"choices":[{"message":{"content":"ok"}}]}'
+  call_ai_model '{"model":"m","messages":[]}' > /dev/null
+  grep -q -- "--connect-timeout" "$CURL_MOCK_LOG"
+  grep -q -- "--max-time" "$CURL_MOCK_LOG"
+}
+
+@test "call_ai_model returns empty, not the string null, when the content is missing" {
+  CURL_MOCK_RESPONSE='{"choices":[{"message":{}}]}'
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ -z "$result" ]
+}
+
+@test "anthropic response: the first text block wins and no text block gives empty" {
+  unset INPUT_API_BASE
+  export ANTHROPIC_API_KEY="sk-ant-test"
+  CURL_MOCK_RESPONSE='{"content":[{"type":"thinking","thinking":"x"},{"type":"text","text":"Summary."}]}'
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ "$result" = "Summary." ]
+  CURL_MOCK_RESPONSE='{"content":[{"type":"tool_use","id":"t"}]}'
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ -z "$result" ]
+}
+
+@test "a 4xx other than 429 is not retried" {
+  CURL_MOCK_RESPONSE='{"error":"bad request"}'
+  CURL_MOCK_STATUS="400"
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ -z "$result" ]
+  [ "$(grep -c '^curl' "$CURL_MOCK_LOG")" -eq 1 ]
+}
+
+@test "after an auth failure, later calls in the run make no request" {
+  CURL_MOCK_RESPONSE='{"error":"unauthorized"}'
+  CURL_MOCK_STATUS="401"
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ -z "$result" ]
+  CURL_MOCK_STATUS="200"
+  CURL_MOCK_RESPONSE='{"choices":[{"message":{"content":"ok"}}]}'
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ -z "$result" ]
+  [ "$(grep -c '^curl' "$CURL_MOCK_LOG")" -eq 1 ]
+}

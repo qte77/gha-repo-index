@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gha-ai-changelog. New inputs `API_BASE`, `AI_TOKEN`, `ANTHROPIC_API_KEY`; `AI_MODEL` now defaults to
   empty (required with `API_BASE`). With `AI_ENABLED` on and no usable provider, the registry still builds
   and the run logs one warning instead of silently writing no summaries. `AI_TOKEN` no longer falls back
-  to the GitHub token
+  to the GitHub token. Each request times out (10 s to connect, 60 s in total); a 4xx other than 429 is not retried; after a
+  401/403 the run stops calling the provider; a response without text stores no summary (never the string `null`). The
+  default Anthropic model is the small one on purpose: summaries are 2-3 sentences
 - `scripts/collect-repo-metadata.sh`: `collect_bulk_metadata` retries `gh repo list` up to 3 times
   (5 s apart) when it fails or returns no JSON array, as a transient GraphQL HTTP 502 does, and then
   fails with a clear error. Before, the empty output surfaced later as a `jq --argjson` error
