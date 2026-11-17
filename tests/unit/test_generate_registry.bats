@@ -102,3 +102,28 @@ teardown() {
   # ASSERT
   grep -q '| Repo |' "$OUTPUT_DIR/REPO_REGISTRY.md"
 }
+
+# --- AI summaries without a provider ---
+
+@test "generate_registry warns once and skips summaries when AI is on but no provider is set" {
+  export INPUT_AI_ENABLED="true"
+  unset INPUT_API_BASE ANTHROPIC_API_KEY
+  source "$REPO_ROOT/scripts/summarize-with-ai.sh"
+  # ACT
+  run generate_registry
+  # ASSERT
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '::warning::' <<< "$output")" -eq 1 ]
+  [ "$(jq '[.repos[] | select(has("aiSummary"))] | length' "$OUTPUT_DIR/index.json")" -eq 0 ]
+}
+
+@test "generate_registry warns and skips summaries when API_BASE has no AI_MODEL" {
+  export INPUT_AI_ENABLED="true" INPUT_API_BASE="https://llm.example/v1"
+  unset INPUT_AI_MODEL ANTHROPIC_API_KEY
+  source "$REPO_ROOT/scripts/summarize-with-ai.sh"
+  # ACT
+  run generate_registry
+  # ASSERT
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::warning::AI_MODEL is required with API_BASE"* ]]
+}

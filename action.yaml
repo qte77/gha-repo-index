@@ -13,11 +13,20 @@ inputs:
     description: "Comma-separated owner/repo list. If empty, auto-discovers all repos for OWNER."
     required: false
   AI_ENABLED:
-    description: "Enable AI summarization via GitHub Models."
+    description: "Enable AI summaries. Needs API_BASE + AI_TOKEN or ANTHROPIC_API_KEY (GitHub Models was retired 2026-07-30); without one, summaries are skipped with a warning."
     default: "false"
   AI_MODEL:
-    description: "GitHub Models AI model to use."
-    default: "openai/gpt-4.1-mini"
+    description: "Model ID. Required with API_BASE; defaults to claude-haiku-5-5 with ANTHROPIC_API_KEY."
+    default: ""
+  API_BASE:
+    description: "Base URL of an OpenAI-compatible API (e.g. https://api.openai.com/v1). Takes precedence over ANTHROPIC_API_KEY."
+    default: ""
+  AI_TOKEN:
+    description: "Bearer token for API_BASE."
+    default: ""
+  ANTHROPIC_API_KEY:
+    description: "Anthropic API key. Used when API_BASE is empty."
+    default: ""
   OUTPUT_DIR:
     description: "Directory to write registry files."
     default: "registry"
@@ -56,11 +65,13 @@ runs:
         INPUT_REPOS: ${{ inputs.REPOS }}
         INPUT_AI_ENABLED: ${{ inputs.AI_ENABLED }}
         INPUT_AI_MODEL: ${{ inputs.AI_MODEL }}
+        INPUT_API_BASE: ${{ inputs.API_BASE }}
+        ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY }}
         INPUT_OUTPUT_DIR: ${{ inputs.OUTPUT_DIR }}
         INPUT_INCLUDE_ARCHIVED: ${{ inputs.INCLUDE_ARCHIVED }}
         INPUT_INCLUDE_FORKS: ${{ inputs.INCLUDE_FORKS }}
         GH_TOKEN: ${{ inputs.TOKEN || github.token }}
-        AI_TOKEN: ${{ inputs.TOKEN || github.token }}
+        AI_TOKEN: ${{ inputs.AI_TOKEN }}
       run: |
         chmod +x "${{ github.action_path }}/scripts/"*.sh
         source "${{ github.action_path }}/scripts/common.sh"
