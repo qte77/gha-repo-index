@@ -11,6 +11,16 @@ generate_registry() {
   local bulk
   bulk=$(collect_bulk_metadata "$owner")
 
+  # AI summaries need a provider; without one, warn once and skip them
+  local ai_on="${INPUT_AI_ENABLED:-false}"
+  if [[ "$ai_on" == "true" && -z "$(ai_provider)" ]]; then
+    echo "::warning::AI_ENABLED is true but no AI provider is set (GitHub Models was retired 2026-07-30); set API_BASE + AI_TOKEN (OpenAI-compatible) or ANTHROPIC_API_KEY. Skipping AI summaries."
+    ai_on="false"
+  elif [[ "$ai_on" == "true" && "$(ai_provider)" == "openai" && -z "${INPUT_AI_MODEL:-}" ]]; then
+    echo "::warning::AI_MODEL is required with API_BASE. Skipping AI summaries."
+    ai_on="false"
+  fi
+
   # 2. Enrich with per-repo metadata
   local enriched="[]"
   local repo_count
@@ -65,7 +75,7 @@ generate_registry() {
       }')
 
     # AI summary (Phase 2, conditional)
-    if [[ "${INPUT_AI_ENABLED:-false}" == "true" ]]; then
+    if [[ "$ai_on" == "true" ]]; then
       local summary
       summary=$(summarize_repo "$entry")
       if [[ -n "$summary" ]]; then

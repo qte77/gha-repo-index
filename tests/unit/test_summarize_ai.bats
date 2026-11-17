@@ -15,10 +15,19 @@ setup() {
   curl() {
     echo "curl $*" >> "$CURL_MOCK_LOG"
     # Return body + status on separate lines (matches -w "\n%{http_code}" pattern)
-    echo "${CURL_MOCK_RESPONSE:-{}}"
+    # Reason: ${CURL_MOCK_RESPONSE:-{}} would append a stray "}" to a set value
+    local body="${CURL_MOCK_RESPONSE:-}"
+    [ -n "$body" ] || body='{}'
+    echo "$body"
     echo "${CURL_MOCK_STATUS:-200}"
   }
   export -f curl
+
+  # Default provider for the payload/call tests: OpenAI-compatible
+  unset ANTHROPIC_API_KEY
+  export INPUT_API_BASE="https://llm.example/v1"
+  export AI_TOKEN="test-token"
+  export INPUT_AI_MODEL="openai/gpt-4.1-mini"
 }
 
 teardown() {
@@ -139,4 +148,58 @@ teardown() {
   result=$(summarize_repo "$metadata")
   # ASSERT
   [ -z "$result" ]
+}
+
+# --- provider selection (GitHub Models was retired 2026-07-30) ---
+
+@test "ai_provider prefers API_BASE over ANTHROPIC_API_KEY" {
+  export ANTHROPIC_API_KEY="sk-ant-test"
+  [ "$(ai_provider)" = "openai" ]
+}
+
+@test "ai_provider is anthropic with only ANTHROPIC_API_KEY" {
+  unset INPUT_API_BASE
+  export ANTHROPIC_API_KEY="sk-ant-test"
+  [ "$(ai_provider)" = "anthropic" ]
+}
+
+@test "ai_provider is empty when no provider is configured" {
+  unset INPUT_API_BASE ANTHROPIC_API_KEY
+  [ -z "$(ai_provider)" ]
+}
+
+@test "call_ai_model posts to API_BASE chat completions with the AI_TOKEN bearer" {
+  CURL_MOCK_RESPONSE='{"choices":[{"message":{"content":"ok"}}]}'
+  call_ai_model '{"model":"m","messages":[]}' > /dev/null
+  grep -q "https://llm.example/v1/chat/completions" "$CURL_MOCK_LOG"
+  grep -q "Authorization: Bearer test-token" "$CURL_MOCK_LOG"
+  ! grep -q "models.github.ai" "$CURL_MOCK_LOG"
+}
+
+@test "anthropic payload puts the system prompt top-level and defaults the model" {
+  unset INPUT_API_BASE INPUT_AI_MODEL
+  export ANTHROPIC_API_KEY="sk-ant-test"
+  local metadata='{"name":"rtk","description":"desc","languages":[],"topics":[],"readmeExcerpt":"","keyFiles":[]}'
+  result=$(build_ai_payload "$metadata")
+  [ "$(echo "$result" | jq -r '.model')" = "claude-haiku-5-5" ]
+  [ -n "$(echo "$result" | jq -r '.system')" ]
+  [ "$(echo "$result" | jq -r '.messages[0].role')" = "user" ]
+  [ "$(echo "$result" | jq '.messages | length')" = "1" ]
+}
+
+@test "anthropic call uses the Messages API and extracts content text" {
+  unset INPUT_API_BASE
+  export ANTHROPIC_API_KEY="sk-ant-test"
+  CURL_MOCK_RESPONSE='{"content":[{"type":"text","text":"A CLI proxy."}]}'
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ "$result" = "A CLI proxy." ]
+  grep -q "https://api.anthropic.com/v1/messages" "$CURL_MOCK_LOG"
+  grep -q "x-api-key: sk-ant-test" "$CURL_MOCK_LOG"
+}
+
+@test "call_ai_model makes no request and returns empty without a provider" {
+  unset INPUT_API_BASE ANTHROPIC_API_KEY
+  result=$(call_ai_model '{"model":"m","messages":[]}')
+  [ -z "$result" ]
+  [ ! -s "$CURL_MOCK_LOG" ]
 }

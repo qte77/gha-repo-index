@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- AI summaries work again after the GitHub Models retirement (2026-07-30, #20):
+  `scripts/summarize-with-ai.sh` calls an OpenAI-compatible API (`API_BASE` + `AI_TOKEN`) or the
+  Anthropic Messages API (`ANTHROPIC_API_KEY`, default model `claude-haiku-5-5`), the same order as
+  gha-ai-changelog. New inputs `API_BASE`, `AI_TOKEN`, `ANTHROPIC_API_KEY`; `AI_MODEL` now defaults to
+  empty (required with `API_BASE`). With `AI_ENABLED` on and no usable provider, the registry still builds
+  and the run logs one warning instead of silently writing no summaries. `AI_TOKEN` no longer falls back
+  to the GitHub token
 - `scripts/collect-repo-metadata.sh`: `collect_bulk_metadata` retries `gh repo list` up to 3 times
   (5 s apart) when it fails or returns no JSON array, as a transient GraphQL HTTP 502 does, and then
   fails with a clear error. Before, the empty output surfaced later as a `jq --argjson` error

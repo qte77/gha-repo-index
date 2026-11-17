@@ -11,7 +11,7 @@ gha-repo-index reads:
   ├── gh repo list (bulk metadata, 1 API call)
   ├── gh api repos/.../contents (file tree per repo)
   ├── gh api repos/.../readme (excerpts)
-  └── GitHub Models API (AI summaries, Phase 2)
+  └── LLM API: OpenAI-compatible or Anthropic (AI summaries, Phase 2)
 
 gha-repo-index produces → committed to qte77/qte77:
   ├── registry/index.json ──→ machine-readable SOT
@@ -46,7 +46,7 @@ Future: other GHAs consume index.json (opt-in, one at a time):
 │                                                       │
 │  gha-ai-changelog          gha-dirtree-to-readme      │
 │  ├─ PR commits → summary   ├─ file tree → README      │
-│  └─ GitHub Models AI       └─ structure snapshot       │
+│  └─ LLM API summary        └─ structure snapshot       │
 └───────────────────────────────────────────────────────┘
                        │
                        ▼
