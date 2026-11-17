@@ -13,8 +13,10 @@ AI_RETRY_DELAY=5
 AI_CONNECT_TIMEOUT=10
 AI_MAX_TIME=60
 # Reason: summaries run in a subshell per repo, so a shell variable can't carry
-# "auth failed" to the next repo; a marker file for this run can.
-AI_AUTH_FAILED_FILE="${TMPDIR:-/tmp}/repo-index-ai-auth-failed.$$"
+# "auth failed" to the next repo; a marker file can. It lives in a private
+# directory made by mktemp (mode 700), never at a predictable shared path.
+AI_STATE_DIR=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/repo-index-ai.XXXXXX")
+AI_AUTH_FAILED_FILE="$AI_STATE_DIR/auth-failed"
 AI_SYSTEM_PROMPT="You are a concise technical writer. Given repository metadata, produce a 2-3 sentence summary describing: (1) what the project does, (2) its primary technology, (3) its role if part of a larger ecosystem. Output ONLY the summary text."
 
 # Print the configured provider: "openai", "anthropic", or nothing.
